@@ -126,6 +126,17 @@ def logout():
     return redirect(url_for('home'))
 
 
+@app.route('/logoutAll', methods=['GET'])
+def logout_all():
+    global USERS
+    for username in USERS.keys():
+        if USERS[username].game is not None:
+            USERS[username].game.surrender_game(USERS[username])
+    USERS = {}
+    session.pop('username')
+    return redirect(url_for('login'))
+
+
 @app.route('/game', methods=['GET'])
 def game():
     if USERS[session['username']].game is not None:
