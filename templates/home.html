@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Select an opponent</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='stylesheets/home.css') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}"/>
+    <meta http-equiv="refresh" content="2">
+</head>
+<body>
+    <h2>Select an opponent</h2><br>
+    <div class="main">
+        {% if opponents|length == 0 %}
+            <p><b>No other players are online and ready to play</b></p>
+        {% endif %}
+        {% for opponent in opponents.values() %}
+            <a href="/startGame?opponent={{ opponent.username }}"><b>{{ opponent.username }}</b></a><br>
+        {% endfor %}
+</div>
+</body>
+</html>

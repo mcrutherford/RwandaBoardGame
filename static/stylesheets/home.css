@@ -1,0 +1,37 @@
+body
+{
+    margin: 0;
+    padding: 0;
+    background-color:#6abadeba;
+    font-family: 'Arial', serif;
+}
+.main{
+        width: 380px;
+        overflow: hidden;
+        margin: auto;
+        /*margin: 20 0 0 450px;  */
+        padding: 80px;
+        background: #23463f;
+        border-radius: 15px ;
+
+}
+h2{
+    text-align: center;
+    color: #277582;
+    padding: 20px;
+}
+a{
+    color: #08ffd1;
+    font-size: 17px;
+    /*margin-left: 35px;*/
+    text-decoration: none;
+    display: block;
+    text-align: center;
+}
+p{
+    color: #08ffd1;
+    font-size: 17px;
+    /*margin-left: 30px;*/
+    display: block;
+    text-align: center;
+}

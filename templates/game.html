@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Rwanda Board Game</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='stylesheets/board.css') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}"/>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="//cdn.jsdelivr.net/npm/sweetalert2@10"></script>
+    <script>import Swal from 'sweetalert2'</script>
+</head>
+<body>
+
+<div id="refreshing-board"></div>
+<br>
+<button onclick="helpMenu()" class="helpButton">Help</button>
+
+<script>
+    var refreshInterval;
+    function refresh_board() {
+        $("#refreshing-board").load('{{url_for('get_board')}}');
+    }
+    $("document").ready(function(){
+        refreshInterval = setInterval(refresh_board, 2000);
+        refresh_board();
+    })
+
+    function handle_click(clicked_id) {
+        $.post('{{ url_for('make_move') }}', { button_id: clicked_id })
+            .done(function( data ) {
+                refresh_board();
+            });
+    }
+
+    function helpMenu() {
+        Swal.fire({
+            title: 'Instructions',
+            html: "- The Tutsi (runner) is invisible to the Hutu (hunter)<br>" +
+                "- If the Tutsi is unable to move, they lose<br>" +
+                "- If the Tutsi survives the 100 day genocide, they win<br>" +
+                "- Hutu roadblocks block the Tutsi<br>" +
+                "- Hutu radio towers prompt militias to set up their own roadblocks<br>" +
+                "- The Hutu can organize a village against Tutsis. This is invisible to the Tutsi, but they will die if entering a organized village",
+            icon: 'info'
+        })
+    }
+</script>
+</body>
+</html>
