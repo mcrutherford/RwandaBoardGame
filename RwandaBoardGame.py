@@ -8,7 +8,7 @@ from game import Game
 from player import Player
 
 app = Flask(__name__)
-app.secret_key = 'super secret key'
+app.secret_key = '!47sA#z5izEmffrc'
 
 
 USERS_FILE = 'users.pickle'

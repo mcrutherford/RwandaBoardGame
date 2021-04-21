@@ -127,7 +127,10 @@ class Game:
             if self.turn == self.player_tutsi:
                 self.turn = self.player_hutu
                 self.hutu_placing = Cell(-1, -1, random.choice(HUTU_PLACEABLE_OBJECTS), self)
-                self.hutu_game_message = f"Choose a location to place a {str(self.hutu_placing.token)}"
+                if isinstance(self.hutu_placing.token, Roadblock):
+                    self.hutu_game_message = f"Choose a location to place a {str(self.hutu_placing.token)}"
+                else:
+                    self.hutu_game_message = f"Choose a location to place a <b style='color: #FF0000;'>{str(self.hutu_placing.token)}</b>"
                 self.tutsi_game_message = MESSAGE_WAITING_FOR_TURN
             else:
                 self.turn = self.player_tutsi

@@ -263,6 +263,12 @@ class Village(Token):
         else:
             return None
 
+    def get_tutsi_color(self):
+        if self.is_organized and self.cell.game.is_done:
+            return ENEMY_COLOR
+        else:
+            return None
+
 
 def main():
     pass

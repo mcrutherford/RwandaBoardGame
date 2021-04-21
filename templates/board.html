@@ -8,7 +8,7 @@
 
 <h3>Days remaining: {{ user.game.days_remaining }}</h3>
 {% if user.game.get_game_message(user) != None %}
-    <h3 style="background-color:lightblue;">{{ user.game.get_game_message(user) }}</h3>
+    <h3 style="background-color:lightblue;">{{ user.game.get_game_message(user)|safe }}</h3>
 {% endif %}
 
 <div class="game-board" style="grid-template-columns:{%  for col in user.game.board[0] %} {{ cell_size }}{% endfor %};grid-template-rows:{%  for row in user.game.board %} {{ cell_size }}{% endfor %};">
