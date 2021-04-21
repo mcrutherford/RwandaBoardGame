@@ -10,9 +10,12 @@ from player import Player
 app = Flask(__name__)
 app.secret_key = '!47sA#z5izEmffrc'
 
-
-USERS_FILE = 'users.pickle'
-lock = FileLock("users.pickle.lock")
+if os.path.exists('/home/mark/RwandaBoardGame/'):
+    main_path = '/home/mark/RwandaBoardGame/'
+else:
+    main_path = ''
+USERS_FILE = main_path + 'users.pickle'
+lock = FileLock(main_path + "users.pickle.lock")
 with lock:
     if not os.path.exists(USERS_FILE):
         with open(USERS_FILE, 'wb') as users_f:
