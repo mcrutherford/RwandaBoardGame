@@ -71,7 +71,7 @@ def home():
         for opponent_name, opponent in USERS.items():
             if opponent != user and opponent.game is None:
                 opponents[opponent_name] = opponent
-        return render_template('home.html', currentUser=session['username'], opponents=opponents)
+        return render_template('home.html', user=USERS[session['username']], opponents=opponents)
     else:
         return redirect(url_for('game'))
 

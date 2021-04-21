@@ -4,9 +4,10 @@
     <title>Select an opponent</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='stylesheets/home.css') }}">
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}"/>
-    <meta http-equiv="refresh" content="2">
+{#    <meta http-equiv="refresh" content="2">#}
 </head>
 <body>
+    <div id="header">Currently signed in as: <b>{{ user.username }}</b> <a href="{{ url_for('logout') }}" id="logoutLink">Logout</a></div>
     <h2>Select an opponent</h2><br>
     <div class="main">
         {% if opponents|length == 0 %}
