@@ -1,6 +1,8 @@
 from flask import Flask, render_template, request, session, redirect, url_for
 import urllib.parse
-import threading
+import pickle
+from filelock import FileLock
+import os
 
 from game import Game
 from player import Player
@@ -8,10 +10,14 @@ from player import Player
 app = Flask(__name__)
 app.secret_key = 'super secret key'
 
-lock = threading.Lock()
 
-
-USERS = {}
+USERS_FILE = 'users.pickle'
+lock = FileLock("users.pickle.lock")
+with lock:
+    if not os.path.exists(USERS_FILE):
+        with open(USERS_FILE, 'wb') as users_f:
+            users = {}
+            pickle.dump(users, users_f)
 
 
 ############################################
@@ -43,7 +49,9 @@ def get_arg(arg_name):
 
 @app.before_request
 def before_request_callback():
-    if 'username' in session and session['username'] not in USERS:
+    with open(USERS_FILE, 'rb') as users_f:
+        users = pickle.load(users_f)
+    if 'username' in session and session['username'] not in users:
         print("'username' cookie found, but no attached user. Removing cookie")
         session.pop('username')
 
@@ -65,31 +73,37 @@ def page_not_found(e):
 
 @app.route('/', methods=['GET'])
 def home():
-    user = USERS[session['username']]
+    with open(USERS_FILE, 'rb') as users_f:
+        users = pickle.load(users_f)
+    user = users[session['username']]
     if user.game is None:
         opponents = {}
-        for opponent_name, opponent in USERS.items():
+        for opponent_name, opponent in users.items():
             if opponent != user and opponent.game is None:
                 opponents[opponent_name] = opponent
-        return render_template('home.html', user=USERS[session['username']], opponents=opponents)
+        return render_template('home.html', user=users[session['username']], opponents=opponents)
     else:
         return redirect(url_for('game'))
 
 
 @app.route('/startGame', methods=['GET'])
 def start_game():
-    challenger = USERS[session['username']]
-    opponent = get_arg('opponent')
-    if opponent and opponent in USERS:
-        opponent = USERS[opponent]
-        new_game = Game(challenger, opponent)
-        with lock:
+    with lock:
+        with open(USERS_FILE, 'rb') as users_f:
+            users = pickle.load(users_f)
+        challenger = users[session['username']]
+        opponent = get_arg('opponent')
+        if opponent and opponent in users:
+            opponent = users[opponent]
+            new_game = Game(challenger, opponent)
             if challenger.game is None and opponent.game is None:
                 challenger.game = new_game
                 opponent.game = new_game
-        if challenger.game == opponent.game == new_game:
-            return redirect(url_for('game'))
-    return redirect(url_for('home'))
+            if challenger.game == opponent.game == new_game:
+                with open(USERS_FILE, 'wb') as users_f:
+                    pickle.dump(users, users_f)
+                return redirect(url_for('game'))
+        return redirect(url_for('home'))
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -100,46 +114,62 @@ def login():
         else:
             return render_template("login.html")
     elif request.method == 'POST':
-        username = get_arg('Uname')
-        if username:
-            if username not in USERS:
-                if username.isalnum():
-                    USERS[username] = Player(username)
-                    session['username'] = username
-                    return redirect(url_for('home'))
+        with lock:
+            with open(USERS_FILE, 'rb') as users_f:
+                users = pickle.load(users_f)
+            username = get_arg('Uname')
+            if username:
+                if username not in users:
+                    if username.isalnum():
+                        users[username] = Player(username)
+                        session['username'] = username
+                        with open(USERS_FILE, 'wb') as users_f:
+                            pickle.dump(users, users_f)
+                        return redirect(url_for('home'))
+                    else:
+                        errormessage = f'Username not alphanumeric: {username}'
                 else:
-                    errormessage = f'Username not alphanumeric: {username}'
+                    errormessage = f'Username taken: {username}'
             else:
-                errormessage = f'Username taken: {username}'
-        else:
-            errormessage = 'Username must not be blank'
-        return render_template("login.html", errorMessage=errormessage)
+                errormessage = 'Username must not be blank'
+            return render_template("login.html", errorMessage=errormessage)
 
 
 @app.route('/logout', methods=['GET'])
 def logout():
-    user = USERS[session['username']]
-    if user.game is not None:
-        user.game.surrender_game(user)
-    USERS.pop(session['username'])
-    session.pop('username')
-    return redirect(url_for('home'))
+    with lock:
+        with open(USERS_FILE, 'rb') as users_f:
+            users = pickle.load(users_f)
+        user = users[session['username']]
+        if user.game is not None:
+            user.game.surrender_game(user)
+        users.pop(session['username'])
+        session.pop('username')
+        with open(USERS_FILE, 'wb') as users_f:
+            pickle.dump(users, users_f)
+        return redirect(url_for('home'))
 
 
 @app.route('/logoutAll', methods=['GET'])
 def logout_all():
-    global USERS
-    for username in USERS.keys():
-        if USERS[username].game is not None:
-            USERS[username].game.surrender_game(USERS[username])
-    USERS = {}
-    session.pop('username')
-    return redirect(url_for('login'))
+    with lock:
+        with open(USERS_FILE, 'rb') as users_f:
+            users = pickle.load(users_f)
+        for username in users.keys():
+            if users[username].game is not None:
+                users[username].game.surrender_game(users[username])
+        users = {}
+        session.pop('username')
+        with open(USERS_FILE, 'wb') as users_f:
+            pickle.dump(users, users_f)
+        return redirect(url_for('login'))
 
 
 @app.route('/game', methods=['GET'])
 def game():
-    if USERS[session['username']].game is not None:
+    with open(USERS_FILE, 'rb') as users_f:
+        users = pickle.load(users_f)
+    if users[session['username']].game is not None:
         return render_template("game.html")
     else:
         return redirect(url_for('home'))
@@ -147,37 +177,54 @@ def game():
 
 @app.route('/surrender', methods=['GET'])
 def surrender():
-    user = USERS[session['username']]
-    if user.game is not None:
-        user.game.surrender_game(user)
-    return redirect(url_for('game'))
+    with lock:
+        with open(USERS_FILE, 'rb') as users_f:
+            users = pickle.load(users_f)
+        user = users[session['username']]
+        if user.game is not None:
+            user.game.surrender_game(user)
+        with open(USERS_FILE, 'wb') as users_f:
+            pickle.dump(users, users_f)
+        return redirect(url_for('game'))
 
 
 @app.route('/leaveGame', methods=['GET'])
 def leave_game():
-    user = USERS[session['username']]
-    if user.game is not None:
-        user.game.surrender_game(user)
-    user.game = None
-    return redirect(url_for('home'))
+    with lock:
+        with open(USERS_FILE, 'rb') as users_f:
+            users = pickle.load(users_f)
+        user = users[session['username']]
+        if user.game is not None:
+            user.game.surrender_game(user)
+        user.game = None
+        with open(USERS_FILE, 'wb') as users_f:
+            pickle.dump(users, users_f)
+        return redirect(url_for('home'))
 
 
 @app.route('/getBoard', methods=['GET'])
 def get_board():
-    user = USERS[session['username']]
+    with open(USERS_FILE, 'rb') as users_f:
+        users = pickle.load(users_f)
+    user = users[session['username']]
     cell_size = '30px'
     return render_template("board.html", user=user, cell_size=cell_size)
 
 
 @app.route('/makeMove', methods=['POST'])
 def make_move():
-    user = USERS[session['username']]
-    button_id = get_arg('button_id')
-    if button_id and user.game is not None:
-        name, row, col = button_id.split('_')
-        user.game.make_move(user, int(row), int(col))
-        return 'Success'
-    return 'Fail'
+    with lock:
+        with open(USERS_FILE, 'rb') as users_f:
+            users = pickle.load(users_f)
+        user = users[session['username']]
+        button_id = get_arg('button_id')
+        if button_id and user.game is not None:
+            name, row, col = button_id.split('_')
+            user.game.make_move(user, int(row), int(col))
+            with open(USERS_FILE, 'wb') as users_f:
+                pickle.dump(users, users_f)
+            return 'Success'
+        return 'Fail'
 
 
 if __name__ == '__main__':
